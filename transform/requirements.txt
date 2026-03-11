@@ -1,0 +1,7 @@
+dbt-core
+dbt-postgres
+pandas
+pyarrow
+boto3
+psycopg2-binary
+python-dotenv

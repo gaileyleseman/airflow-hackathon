@@ -1,0 +1,38 @@
+version: 2
+
+sources:
+  - name: citizens
+    schema: raw
+    description: "Raw citizen records ingested as JSONB from the citizens scraper"
+    tables:
+      - name: citizens
+        description: "One row per citizen record, payload contains full JSON object"
+        columns:
+          - name: id
+            description: "Serial primary key"
+          - name: ingested_at
+            description: "Timestamp of ingestion"
+          - name: payload
+            description: "Full citizen JSON object as received from scraper"
+        freshness:
+          warn_after: {count: 25, period: hour}
+          error_after: {count: 48, period: hour}
+        loaded_at_field: ingested_at
+
+  - name: logins
+    schema: raw
+    description: "Raw login records ingested as JSONB from the logins scraper"
+    tables:
+      - name: logins
+        description: "One row per login attempt, payload contains full JSON object"
+        columns:
+          - name: id
+            description: "Serial primary key"
+          - name: ingested_at
+            description: "Timestamp of ingestion"
+          - name: payload
+            description: "Full login JSON object as received from scraper"
+        freshness:
+          warn_after: {count: 25, period: hour}
+          error_after: {count: 48, period: hour}
+        loaded_at_field: ingested_at

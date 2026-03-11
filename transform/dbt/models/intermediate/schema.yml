@@ -1,0 +1,52 @@
+version: 2
+
+models:
+  - name: int_citizens_enriched
+    description: "Citizens enriched with derived columns like age, age_group, and years_registered"
+    columns:
+      - name: citizen_id
+        description: "Unique identifier for the citizen"
+        tests:
+          - not_null
+      - name: age
+        description: "Calculated age in years"
+        tests:
+          - not_null
+      - name: age_group
+        description: "Age group: young, middle_aged, or senior"
+        tests:
+          - not_null
+      - name: years_registered
+        description: "Number of years since registration"
+      - name: is_active
+        description: "Boolean flag for active status"
+
+  - name: int_login_activity
+    description: "Aggregated login activity per citizen"
+    columns:
+      - name: citizen_id
+        description: "Reference to the citizen"
+        tests:
+          - not_null
+      - name: total_attempts
+        description: "Total number of login attempts"
+        tests:
+          - not_null
+      - name: successful_logins
+        description: "Number of successful logins"
+      - name: failed_logins
+        description: "Number of failed logins"
+      - name: success_rate_pct
+        description: "Percentage of successful logins"
+      - name: first_login_at
+        description: "Timestamp of first login attempt"
+      - name: last_login_at
+        description: "Timestamp of most recent login attempt"
+      - name: avg_session_seconds
+        description: "Average session duration in seconds"
+      - name: most_used_device
+        description: "Most frequently used device type"
+      - name: lockout_count
+        description: "Number of account lockout events"
+      - name: is_at_risk
+        description: "Flag for accounts with 3+ recent failures"

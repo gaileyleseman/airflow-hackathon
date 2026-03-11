@@ -1,0 +1,22 @@
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks:
+      - hackathon-network
+
+  superset:
+    build: ./infra/superset
+    ports:
+      - "8088:8088"
+    env_file: .env
+    environment:
+      SUPERSET_SECRET_KEY: "thisISaSECRET_1234_change_in_production"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - hackathon-network

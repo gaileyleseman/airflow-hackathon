@@ -1,0 +1,21 @@
+selectors:
+  - name: citizens_pipeline
+    definition: "source:citizens+"
+
+  - name: logins_pipeline
+    definition: "source:logins+"
+
+  - name: full_pipeline
+    definition:
+      union:
+        - "source:citizens+"
+        - "source:logins+"
+
+  - name: marts_only
+    definition: "tag:mart"
+
+  - name: citizens_dashboard
+    definition: "+exposure:citizens_dashboard"
+
+  - name: logins_dashboard
+    definition: "+exposure:logins_dashboard"

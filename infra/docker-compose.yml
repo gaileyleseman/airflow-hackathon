@@ -1,0 +1,92 @@
+# Infrastructure only — prompt 2 adds scraper, prompt 3 ingestion, prompt 4 transform
+
+services:
+  postgres:
+    image: postgres:15
+    ports:
+      - "5432:5432"
+    env_file: .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hackathon -d hackathon"]
+      interval: 5s
+      retries: 5
+    networks:
+      - hackathon-network
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    env_file: .env
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      retries: 5
+    networks:
+      - hackathon-network
+
+  minio-init:
+    image: minio/mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./infra/minio/init-buckets.sh:/init-buckets.sh
+    entrypoint: ["sh", "/init-buckets.sh"]
+    restart: "no"
+    networks:
+      - hackathon-network
+
+  omnidb:
+    image: taivokasper/omnidb
+    ports:
+      - "8080:8080"
+      - "25482:25482"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - omnidb-data:/etc/omnidb
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8080')\" 2>/dev/null || exit 1"]
+      interval: 5s
+      retries: 12
+      start_period: 10s
+    networks:
+      - hackathon-network
+
+  omnidb-init:
+    image: python:3.11-slim
+    depends_on:
+      omnidb:
+        condition: service_healthy
+    volumes:
+      - omnidb-data:/etc/omnidb
+      - ./infra/omnidb/init-omnidb.py:/init-omnidb.py
+    command: ["python3", "/init-omnidb.py"]
+    restart: "no"
+    networks:
+      - hackathon-network
+
+volumes:
+  postgres-data:
+  minio-data:
+  omnidb-data:
+
+networks:
+  hackathon-network:
+    driver: bridge

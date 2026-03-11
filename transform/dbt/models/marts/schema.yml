@@ -1,0 +1,68 @@
+version: 2
+
+models:
+  - name: mart_citizens
+    description: "Final citizen mart with enriched data and login activity summary"
+    columns:
+      - name: citizen_id
+        description: "Unique identifier for the citizen"
+        tests:
+          - not_null
+          - unique
+      - name: account_health
+        description: "Account health status: healthy, degraded, at_risk, or no_activity"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['healthy', 'degraded', 'at_risk', 'no_activity']
+      - name: full_name
+        description: "Full name of the citizen"
+      - name: age
+        description: "Calculated age in years"
+      - name: age_group
+        description: "Age group classification"
+      - name: municipality
+        description: "Municipality of residence"
+      - name: is_active
+        description: "Whether the citizen account is active"
+      - name: service_tier
+        description: "Service tier level"
+      - name: total_login_attempts
+        description: "Total number of login attempts"
+      - name: successful_logins
+        description: "Number of successful logins"
+      - name: failed_logins
+        description: "Number of failed logins"
+      - name: is_at_risk
+        description: "Flag for accounts with security concerns"
+
+  - name: mart_logins
+    description: "Final login mart with citizen context and derived flags"
+    columns:
+      - name: login_id
+        description: "Unique identifier for the login attempt"
+        tests:
+          - not_null
+          - unique
+      - name: citizen_id
+        description: "Reference to the citizen"
+        tests:
+          - not_null
+      - name: full_name
+        description: "Full name of the citizen (null if unknown)"
+      - name: logged_in_at
+        description: "Timestamp of login attempt"
+      - name: success
+        description: "Whether login was successful"
+      - name: device_type
+        description: "Device type used for login"
+      - name: ip_region
+        description: "Region inferred from IP"
+      - name: is_region_mismatch
+        description: "Flag if login region differs from citizen municipality"
+      - name: is_unknown_citizen
+        description: "Flag if citizen_id not found in citizens table"
+      - name: login_hour
+        description: "Hour of day when login occurred (0-23)"
+      - name: login_day_of_week
+        description: "Day of week when login occurred"

@@ -1,0 +1,57 @@
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+pip-wheel-metadata/
+.venv/
+venv/
+env/
+.python-version
+
+# dbt
+transform/dbt/target/
+transform/dbt/dbt_packages/
+transform/dbt/logs/
+transform/dbt/.user.yml
+
+# Docker volumes / local data
+infra/postgres/data/
+infra/minio/data/
+infra/superset/data/
+infra/omnidb/data/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Misc
+.run_count
+
+# Claude
+.claude/

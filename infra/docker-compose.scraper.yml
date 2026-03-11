@@ -1,0 +1,26 @@
+services:
+  scraper-citizens:
+    build: scraper
+    command: python scrape_citizens.py
+    env_file: .env
+    environment:
+      CITIZENS_COUNT: "50"
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+    restart: "no"
+    networks:
+      - hackathon-network
+
+  scraper-logins:
+    build: scraper
+    command: python scrape_logins.py
+    env_file: .env
+    environment:
+      LOGINS_COUNT: "200"
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+    restart: "no"
+    networks:
+      - hackathon-network

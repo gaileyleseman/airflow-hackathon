@@ -1,0 +1,27 @@
+version: 2
+
+exposures:
+  - name: citizens_dashboard
+    type: dashboard
+    maturity: medium
+    description: >
+      Municipal oversight dashboard. Shows citizen account health,
+      service tier distribution, and dormant accounts per municipality.
+    depends_on:
+      - ref('mart_citizens')
+    owner:
+      name: Data Team
+      email: data@pipeline.local
+
+  - name: logins_dashboard
+    type: dashboard
+    maturity: medium
+    description: >
+      Security audit dashboard. Shows login patterns, region mismatches,
+      unknown citizen references, and at-risk accounts.
+    depends_on:
+      - ref('mart_logins')
+      - ref('mart_citizens')
+    owner:
+      name: Data Team
+      email: data@pipeline.local
