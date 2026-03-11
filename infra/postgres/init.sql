@@ -4,6 +4,13 @@
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
+-- Database: airflow
+-- Airflow metadata DB — schema is managed by `airflow db migrate` at startup
+-- -----------------------------------------------------------------------------
+CREATE DATABASE airflow;
+GRANT ALL PRIVILEGES ON DATABASE airflow TO hackathon;
+
+-- -----------------------------------------------------------------------------
 -- Schema: raw
 -- Stores raw JSON payloads exactly as received, no transformation
 -- -----------------------------------------------------------------------------

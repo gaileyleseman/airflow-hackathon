@@ -1,16 +1,17 @@
 .PHONY: up down clean logs psql console omnidb reset status next-day \
         scrape-citizens scrape-citizens-fail \
         scrape-logins scrape-logins-fail \
-        scrape ingest ingest-build transform transform-build
+        scrape ingest ingest-build transform transform-build \
+        airflow-logs scrape-build
 
 COMPOSE      = docker compose --project-directory .
-COMPOSE_BASE = $(COMPOSE) -f infra/docker-compose.yml -f infra/docker-compose.superset.yml
+COMPOSE_BASE = $(COMPOSE) -f infra/docker-compose.yml -f infra/docker-compose.superset.yml -f orchestration/docker-compose.yml
 
 # Simulated pipeline date — read-only. Advance it with: make next-day
 _COUNT        := $(shell cat .run_count 2>/dev/null || echo 0)
 PIPELINE_DATE := $(shell date -d "2026-01-01 +$(_COUNT) days" +%Y-%m-%d)
 
-up:
+up: scrape-build
 	$(COMPOSE_BASE) up --build -d
 
 down:
@@ -31,6 +32,7 @@ console:
 	@echo "Minio console: http://localhost:9001 (minioadmin / minioadmin)"
 	@echo "OmniDB:        http://localhost:8080 (admin / admin)"
 	@echo "Superset:      http://localhost:8088 (admin / admin)"
+	@echo "Airflow:       http://localhost:8081 (admin / admin)"
 
 omnidb:
 	@echo "OmniDB: http://localhost:8080"
@@ -97,3 +99,10 @@ transform:
 transform-build:
 	$(COMPOSE_BASE) -f infra/docker-compose.transform.yml \
 		build transform
+
+airflow-logs:
+	$(COMPOSE_BASE) logs -f airflow-scheduler
+
+scrape-build:
+	docker build --build-arg SCRIPT=scrape_citizens.py -t airflow-hackathon-scraper-citizens ./scraper
+	docker build --build-arg SCRIPT=scrape_logins.py -t airflow-hackathon-scraper-logins ./scraper

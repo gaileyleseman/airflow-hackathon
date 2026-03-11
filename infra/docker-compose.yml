@@ -90,3 +90,4 @@ volumes:
 networks:
   hackathon-network:
     driver: bridge
+    name: hackathon-network
