@@ -29,10 +29,11 @@ psql:
 	$(COMPOSE_BASE) exec postgres psql -U hackathon -d hackathon
 
 console:
-	@echo "Minio console: http://localhost:9001 (minioadmin / minioadmin)"
-	@echo "OmniDB:        http://localhost:8080 (admin / admin)"
-	@echo "Superset:      http://localhost:8088 (admin / admin)"
 	@echo "Airflow:       http://localhost:8081 (admin / admin)"
+	@echo "Superset:      http://localhost:8088 (admin / admin)"
+	@echo "OmniDB:        http://localhost:8080 (admin / admin)"
+	@echo "MinIO:         http://localhost:9001 (minioadmin / minioadmin)"
+	@echo "PostgreSQL:    localhost:5432         (hackathon / hackathon)"
 
 omnidb:
 	@echo "OmniDB: http://localhost:8080"
