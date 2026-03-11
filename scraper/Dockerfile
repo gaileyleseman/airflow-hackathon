@@ -3,4 +3,6 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
-CMD ["echo", "specify a script via command"]
+ARG SCRIPT
+ENV SCRIPT=${SCRIPT}
+CMD python $SCRIPT
