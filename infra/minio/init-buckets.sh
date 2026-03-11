@@ -23,7 +23,12 @@ echo "MinIO is ready!"
 echo "Creating bucket: raw"
 mc mb local/raw --ignore-existing
 
+# Create the observability bucket
+echo "Creating bucket: observability"
+mc mb local/observability --ignore-existing
+
 echo "Bucket initialization complete!"
 echo "  - raw: stores raw JSON files with path-based separation (citizens/, logins/)"
+echo "  - observability: stores Airflow task logs (airflow-logs/)"
 
 exit 0

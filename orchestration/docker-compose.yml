@@ -8,11 +8,19 @@ x-airflow-common: &airflow-common
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://hackathon:hackathon@postgres:5432/airflow
     AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
     AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+    AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow-webserver:8080/execution/
     AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:-}
     AIRFLOW__API__SECRET_KEY: ${AIRFLOW_SECRET_KEY:-changeme-set-in-env}
+    AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_JWT_SECRET:-changeme-jwt-secret}
+    # Remote logging to MinIO (S3-compatible) so the api-server can read task logs
+    AIRFLOW__LOGGING__REMOTE_LOGGING: "True"
+    AIRFLOW__LOGGING__REMOTE_BASE_LOG_FOLDER: s3://observability/airflow-logs
+    AIRFLOW__LOGGING__REMOTE_LOG_CONN_ID: minio
+    AIRFLOW_CONN_MINIO: "aws://minioadmin:minioadmin@/?endpoint_url=http%3A%2F%2Fminio%3A9000&region_name=us-east-1"
   env_file: .env
   volumes:
     - ./orchestration/dags:/opt/airflow/dags
+    - airflow-logs:/opt/airflow/logs
     - /var/run/docker.sock:/var/run/docker.sock
   networks: [hackathon-network]
   depends_on:
@@ -46,10 +54,18 @@ services:
     command: api-server
     ports: ["8081:8080"]
 
+  airflow-dag-processor:
+    <<: *airflow-common
+    command: dag-processor
+
   airflow-scheduler:
     <<: *airflow-common
     command: scheduler
+    hostname: airflow-scheduler
 
   airflow-triggerer:
     <<: *airflow-common
     command: triggerer
+
+volumes:
+  airflow-logs:
