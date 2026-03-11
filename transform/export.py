@@ -111,27 +111,36 @@ def export_table(conn, client, table: str, bucket: str, key: str) -> int:
 
 
 def main():
-    """Main export function."""
+    """Main export function.
+
+    EXPORT_TABLE controls which mart is exported:
+      - "logins"   — export only mart_logins
+      - "citizens" — export only mart_citizens
+      - unset      — export both (default)
+    """
     bucket = os.environ.get("MINIO_BUCKET_EXPORTS", "exports")
-    today = date.today().isoformat()
+    today = os.environ.get("PIPELINE_DATE", date.today().isoformat())
+    export_table_env = os.environ.get("EXPORT_TABLE", "").strip().lower()
+
+    if export_table_env not in ("", "logins", "citizens"):
+        raise ValueError(f"EXPORT_TABLE must be 'logins', 'citizens', or unset — got: {export_table_env!r}")
 
     conn = None
     try:
         conn = get_pg_connection()
         client = get_minio_client()
 
-        # Ensure exports bucket exists
         ensure_bucket_exists(client, bucket)
 
-        # Export mart_citizens
-        citizens_key = f"marts/{today}/mart_citizens.parquet"
-        citizens_count = export_table(conn, client, "mart_citizens", bucket, citizens_key)
+        if export_table_env in ("", "citizens"):
+            citizens_key = f"marts/{today}/mart_citizens.parquet"
+            citizens_count = export_table(conn, client, "mart_citizens", bucket, citizens_key)
+            logger.info(f"Citizens export complete: {citizens_count} rows")
 
-        # Export mart_logins
-        logins_key = f"marts/{today}/mart_logins.parquet"
-        logins_count = export_table(conn, client, "mart_logins", bucket, logins_key)
-
-        logger.info(f"Export complete. Citizens: {citizens_count}, Logins: {logins_count}")
+        if export_table_env in ("", "logins"):
+            logins_key = f"marts/{today}/mart_logins.parquet"
+            logins_count = export_table(conn, client, "mart_logins", bucket, logins_key)
+            logger.info(f"Logins export complete: {logins_count} rows")
 
     finally:
         if conn:

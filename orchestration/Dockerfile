@@ -7,4 +7,5 @@ USER airflow
 RUN pip install --no-cache-dir \
     apache-airflow-providers-docker \
     apache-airflow-providers-fab \
-    apache-airflow-providers-amazon
+    apache-airflow-providers-amazon \
+    astronomer-cosmos[dbt-postgres]

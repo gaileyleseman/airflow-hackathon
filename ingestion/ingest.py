@@ -88,7 +88,7 @@ def ensure_tables_exist(conn):
             CREATE TABLE IF NOT EXISTS raw.citizens (
                 id          SERIAL PRIMARY KEY,
                 ingested_at TIMESTAMP NOT NULL DEFAULT NOW(),
-                source_file VARCHAR NOT NULL,
+                source_file VARCHAR NOT NULL UNIQUE,
                 payload     JSONB NOT NULL
             )
         """)
@@ -96,12 +96,16 @@ def ensure_tables_exist(conn):
             ALTER TABLE raw.citizens
             ADD COLUMN IF NOT EXISTS source_file VARCHAR NOT NULL DEFAULT ''
         """)
+        cur.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS citizens_source_file_idx
+            ON raw.citizens (source_file)
+        """)
 
         cur.execute("""
             CREATE TABLE IF NOT EXISTS raw.logins (
                 id          SERIAL PRIMARY KEY,
                 ingested_at TIMESTAMP NOT NULL DEFAULT NOW(),
-                source_file VARCHAR NOT NULL,
+                source_file VARCHAR NOT NULL UNIQUE,
                 payload     JSONB NOT NULL
             )
         """)
@@ -109,18 +113,13 @@ def ensure_tables_exist(conn):
             ALTER TABLE raw.logins
             ADD COLUMN IF NOT EXISTS source_file VARCHAR NOT NULL DEFAULT ''
         """)
+        cur.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS logins_source_file_idx
+            ON raw.logins (source_file)
+        """)
 
     conn.commit()
 
-
-def is_already_loaded(conn, table: str, source_file: str) -> bool:
-    """Return True if this source file has already been loaded into the table."""
-    with conn.cursor() as cur:
-        cur.execute(
-            f"SELECT 1 FROM {table} WHERE source_file = %s LIMIT 1",
-            (source_file,)
-        )
-        return cur.fetchone() is not None
 
 
 def read_from_minio(client, bucket: str, key: str) -> list[dict] | None:
@@ -140,31 +139,67 @@ def read_from_minio(client, bucket: str, key: str) -> list[dict] | None:
         raise
 
 
-def insert_records(conn, table: str, source_file: str, records: list[dict]):
-    """Insert an entire file's records as a single JSONB row."""
+def insert_records(conn, table: str, source_file: str, records: list[dict]) -> bool:
+    """Insert an entire file's records as a single JSONB row.
+
+    Returns True if the row was inserted, False if it was already present.
+    Uses ON CONFLICT DO NOTHING to enforce idempotency at the database level.
+    """
     with conn.cursor() as cur:
         cur.execute(
-            f"INSERT INTO {table} (source_file, payload) VALUES (%s, %s)",
+            f"INSERT INTO {table} (source_file, payload) VALUES (%s, %s) ON CONFLICT (source_file) DO NOTHING",
             (source_file, json.dumps(records))
         )
+        inserted = cur.rowcount == 1
     conn.commit()
-    logger.info(f"Inserted {source_file} as 1 row into {table} ({len(records)} records)")
+    if inserted:
+        logger.info(f"Inserted {source_file} as 1 row into {table} ({len(records)} records)")
+    else:
+        logger.info(f"Skipped {source_file} — already present in {table}")
+    return inserted
+
+
+def ingest_citizens(conn, minio_client, bucket: str, today: str) -> int:
+    """Ingest citizens source file. Returns number of records inserted (0 if skipped)."""
+    key = f"citizens/{today}.json"
+    logger.info(f"Reading {bucket}/{key} from Minio")
+    records = read_from_minio(minio_client, bucket, key)
+    if records is None:
+        return 0
+    logger.info(f"Read {len(records)} citizen records")
+    return len(records) if insert_records(conn, "raw.citizens", key, records) else 0
+
+
+def ingest_logins(conn, minio_client, bucket: str, today: str) -> int:
+    """Ingest logins source file. Returns number of records inserted (0 if skipped)."""
+    key = f"logins/{today}.json"
+    logger.info(f"Reading {bucket}/{key} from Minio")
+    records = read_from_minio(minio_client, bucket, key)
+    if records is None:
+        return 0
+    logger.info(f"Read {len(records)} login records")
+    return len(records) if insert_records(conn, "raw.logins", key, records) else 0
 
 
 def main():
     """
     Main ingestion function.
 
-    Loads all sources (citizens, logins) from MinIO into PostgreSQL.
-    Skips any source file that has already been loaded (idempotent).
+    Loads sources from MinIO into PostgreSQL. The INGEST_SOURCE environment
+    variable controls which source is loaded:
+      - "citizens" — ingest only citizens
+      - "logins"   — ingest only logins
+      - unset      — ingest both (default, backwards-compatible)
 
-    NOTE: This script loads all sources in a single run because in the legacy
-    setup ingestion is one CronJob that loads all sources. This is one of the
-    things that will be refactored in the Airflow hackathon — split into
-    per-source tasks for better observability and failure isolation.
+    Idempotency is enforced at the database level via a UNIQUE constraint on
+    source_file and ON CONFLICT DO NOTHING.
     """
     bucket = os.environ.get("MINIO_BUCKET_RAW", "raw")
     today = os.environ.get("PIPELINE_DATE", date.today().isoformat())
+    source = os.environ.get("INGEST_SOURCE", "").strip().lower()
+
+    if source not in ("", "citizens", "logins"):
+        raise ValueError(f"INGEST_SOURCE must be 'citizens', 'logins', or unset — got: {source!r}")
 
     minio_client = get_minio_client()
     conn = None
@@ -173,34 +208,13 @@ def main():
         conn = get_pg_connection()
         ensure_tables_exist(conn)
 
-        citizens_count = 0
-        logins_count = 0
+        if source in ("", "citizens"):
+            n = ingest_citizens(conn, minio_client, bucket, today)
+            logger.info(f"Citizens ingestion complete: {n} records")
 
-        # Ingest citizens
-        citizens_key = f"citizens/{today}.json"
-        if is_already_loaded(conn, "raw.citizens", citizens_key):
-            logger.info(f"Already loaded {citizens_key} — skipping")
-        else:
-            logger.info(f"Reading {bucket}/{citizens_key} from Minio")
-            citizens = read_from_minio(minio_client, bucket, citizens_key)
-            if citizens is not None:
-                logger.info(f"Read {len(citizens)} citizen records")
-                insert_records(conn, "raw.citizens", citizens_key, citizens)
-                citizens_count = len(citizens)
-
-        # Ingest logins
-        logins_key = f"logins/{today}.json"
-        if is_already_loaded(conn, "raw.logins", logins_key):
-            logger.info(f"Already loaded {logins_key} — skipping")
-        else:
-            logger.info(f"Reading {bucket}/{logins_key} from Minio")
-            logins = read_from_minio(minio_client, bucket, logins_key)
-            if logins is not None:
-                logger.info(f"Read {len(logins)} login records")
-                insert_records(conn, "raw.logins", logins_key, logins)
-                logins_count = len(logins)
-
-        logger.info(f"Ingestion complete. Citizens: {citizens_count}, Logins: {logins_count}")
+        if source in ("", "logins"):
+            n = ingest_logins(conn, minio_client, bucket, today)
+            logger.info(f"Logins ingestion complete: {n} records")
 
     finally:
         if conn:

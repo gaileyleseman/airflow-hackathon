@@ -2,7 +2,7 @@
         scrape-citizens scrape-citizens-fail \
         scrape-logins scrape-logins-fail \
         scrape ingest ingest-build transform transform-build \
-        airflow-logs scrape-build
+        airflow-logs scrape-build build
 
 COMPOSE      = docker compose --project-directory .
 COMPOSE_BASE = $(COMPOSE) -f infra/docker-compose.yml -f infra/docker-compose.superset.yml -f orchestration/docker-compose.yml
@@ -11,7 +11,7 @@ COMPOSE_BASE = $(COMPOSE) -f infra/docker-compose.yml -f infra/docker-compose.su
 _COUNT        := $(shell cat .run_count 2>/dev/null || echo 0)
 PIPELINE_DATE := $(shell date -d "2026-01-01 +$(_COUNT) days" +%Y-%m-%d)
 
-up: scrape-build
+up: build
 	$(COMPOSE_BASE) up --build -d
 
 down:
@@ -107,3 +107,7 @@ airflow-logs:
 scrape-build:
 	docker build --build-arg SCRIPT=scrape_citizens.py -t airflow-hackathon-scraper-citizens ./scraper
 	docker build --build-arg SCRIPT=scrape_logins.py -t airflow-hackathon-scraper-logins ./scraper
+
+build: scrape-build
+	docker build -t airflow-hackathon-ingestion ./ingestion
+	docker build -t airflow-hackathon-transform ./transform
