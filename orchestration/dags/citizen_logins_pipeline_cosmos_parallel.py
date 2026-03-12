@@ -110,7 +110,7 @@ with DAG(
         execution_config=_execution_config,
         render_config=RenderConfig(
             load_method=LoadMode.DBT_LS,
-            dbt_deps=True,
+            dbt_deps=False,
             select=["stg_citizens", "int_citizens_enriched"],
         ),
     )
@@ -124,7 +124,7 @@ with DAG(
         execution_config=_execution_config,
         render_config=RenderConfig(
             load_method=LoadMode.DBT_LS,
-            dbt_deps=True,
+            dbt_deps=False,
             select=["stg_logins", "int_login_activity"],
         ),
     )
@@ -137,7 +137,7 @@ with DAG(
         execution_config=_execution_config,
         render_config=RenderConfig(
             load_method=LoadMode.DBT_LS,
-            dbt_deps=True,
+            dbt_deps=False,
             select=["mart_logins"],
         ),
     )
@@ -150,7 +150,7 @@ with DAG(
         execution_config=_execution_config,
         render_config=RenderConfig(
             load_method=LoadMode.DBT_LS,
-            dbt_deps=True,
+            dbt_deps=False,
             select=["mart_citizens"],
         ),
     )

@@ -87,7 +87,7 @@ with DAG(
 
     _render_config = RenderConfig(
         load_method=LoadMode.DBT_LS,
-        dbt_deps=True,
+        dbt_deps=False,
     )
 
     dbt_transform = DbtTaskGroup(
