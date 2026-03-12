@@ -76,4 +76,4 @@ with DAG(
         docker_url="unix://var/run/docker.sock",
     )
 
-    scrape_citizens >> scrape_logins >> ingest >> dbt_transform
+    [scrape_citizens, scrape_logins] >> ingest >> dbt_transform
