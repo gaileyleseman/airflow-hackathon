@@ -19,7 +19,7 @@ _postgres_env = {
 }
 
 with DAG(
-    dag_id="citizen_pipeline",
+    dag_id="citizen_pipeline_jan",
     schedule="@daily",
     start_date=datetime(2026, 1, 1),
     catchup=False,
@@ -76,4 +76,4 @@ with DAG(
         docker_url="unix://var/run/docker.sock",
     )
 
-    [scrape_citizens, scrape_logins] >> ingest >> dbt_transform
+    scrape_citizens >> scrape_logins >> ingest >> dbt_transform
